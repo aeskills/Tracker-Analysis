@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tracker Analysis</title>
+  <meta name="description" content="Portal landing page to access Engagement Tracker and Deployment Tracker dashboards.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    :root {
+      --bg-primary: #080b13;
+      --bg-secondary: #0f1322;
+      --bg-card: #14192b;
+      --bg-card-hover: #1b213a;
+      --border-color: rgba(255, 255, 255, 0.07);
+      --border-light: rgba(255, 255, 255, 0.12);
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-orange: #EF9F27;
+      --accent-purple: #8b5cf6;
+      --accent-cyan: #06b6d4;
+      --radius: 14px;
+    }
+    html {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      color: var(--text-primary);
+      background: var(--bg-primary);
+      -webkit-font-smoothing: antialiased;
+    }
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+      padding: 20px;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: -1;
+      background:
+        radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 50% 50%, rgba(239, 159, 39, 0.03) 0%, transparent 40%);
+    }
+
+    .portal-container {
+      max-width: 900px;
+      width: 100%;
+      text-align: center;
+      animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .portal-header {
+      margin-bottom: 48px;
+    }
+    .portal-header h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, var(--text-primary) 30%, #a5b4fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .portal-header p {
+      font-size: 15px;
+      color: var(--text-secondary);
+      max-width: 460px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    .portal-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 24px;
+      margin-bottom: 40px;
+    }
+
+    .portal-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 40px 32px;
+      text-decoration: none;
+      color: inherit;
+      text-align: left;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+    .portal-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 3px;
+      opacity: 0.8;
+      transition: opacity 0.3s;
+    }
+    .portal-card.card-engagement::before {
+      background: linear-gradient(90deg, var(--accent-orange), #f59e0b);
+    }
+    .portal-card.card-deployment::before {
+      background: linear-gradient(90deg, var(--accent-purple), var(--accent-cyan));
+    }
+
+    .portal-card:hover {
+      border-color: var(--border-light);
+      transform: translateY(-4px);
+      background: var(--bg-card-hover);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+    }
+    
+    .portal-card.card-engagement:hover {
+      box-shadow: 0 12px 30px rgba(239, 159, 39, 0.06), 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+    .portal-card.card-deployment:hover {
+      box-shadow: 0 12px 30px rgba(139, 92, 246, 0.06), 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .card-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      margin-bottom: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .card-engagement .card-icon {
+      background: rgba(239, 159, 39, 0.08);
+      color: var(--accent-orange);
+    }
+    .card-deployment .card-icon {
+      background: rgba(139, 92, 246, 0.08);
+      color: var(--accent-purple);
+    }
+
+    .portal-card h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: var(--text-primary);
+      transition: color 0.2s;
+    }
+    .portal-card:hover h2 {
+      color: var(--text-primary);
+    }
+    .card-engagement:hover h2 {
+      color: var(--accent-orange);
+    }
+    .card-deployment:hover h2 {
+      color: var(--accent-purple);
+    }
+
+    .portal-card p {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: auto;
+      padding-bottom: 28px;
+    }
+
+    .card-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+    .portal-card:hover .card-action {
+      color: var(--text-primary);
+    }
+    .card-engagement:hover .card-action {
+      color: var(--accent-orange);
+    }
+    .card-deployment:hover .card-action {
+      color: var(--accent-purple);
+    }
+    .action-arrow {
+      transition: transform 0.2s;
+    }
+    .portal-card:hover .action-arrow {
+      transform: translateX(4px);
+    }
+
+    .portal-footer {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+
+    @media (max-width: 680px) {
+      .portal-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      .portal-header h1 {
+        font-size: 32px;
+      }
+      .portal-card {
+        padding: 32px 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="portal-container">
+    
+    <header class="portal-header">
+      <h1>Tracker Analysis</h1>
+      <p>Select a portal dashboard below to begin parsing sheets and analyzing tracker data.</p>
+    </header>
+
+    <div class="portal-grid">
+      
+      <!-- Engagement Tracker -->
+      <a href="Engagement Tracker/index.html" class="portal-card card-engagement">
+        <div class="card-icon">📋</div>
+        <h2>Engagement Tracker</h2>
+        <p>Analyze deployment rates, account distributions, marquee metrics, and quarterly summaries.</p>
+        <div class="card-action">
+          <span>Open Dashboard</span>
+          <span class="action-arrow">→</span>
+        </div>
+      </a>
+
+      <!-- Deployment Tracker -->
+      <a href="Deployment Tracker/index.html" class="portal-card card-deployment">
+        <div class="card-icon">🚀</div>
+        <h2>Deployment Tracker</h2>
+        <p>Monitor installation progress, device setups, and school distributions across different sectors.</p>
+        <div class="card-action">
+          <span>Open Dashboard</span>
+          <span class="action-arrow">→</span>
+        </div>
+      </a>
+
+
+
+    </div>
+
+    <footer class="portal-footer">
+      Tracker Analysis Portal · v1.0.0
+    </footer>
+
+  </div>
+
+</body>
+</html>

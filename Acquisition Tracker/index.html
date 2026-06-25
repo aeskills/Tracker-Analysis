@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acquisition Tracker Analysis</title>
+  <meta name="description" content="Upload and analyze school acquisition pipelines, partner types, board distributions, and statuses.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    /* ── Reset & Theme variables ─────────────────────────── */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    :root {
+      --bg-primary: #080b13;
+      --bg-secondary: #0f1322;
+      --bg-card: #14192b;
+      --bg-card-hover: #1b213a;
+      --bg-surface: #0b0e1a;
+      --border-color: rgba(255, 255, 255, 0.07);
+      --border-light: rgba(255, 255, 255, 0.12);
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent: #10b981;
+      --accent-glow: rgba(16, 185, 129, 0.15);
+      --accent-soft: rgba(16, 185, 129, 0.08);
+      --blue: #3b82f6;
+      --green: #10b981;
+      --purple: #8b5cf6;
+      --cyan: #06b6d4;
+      --pink: #ec4899;
+      --radius: 10px;
+      --radius-lg: 14px;
+    }
+    html {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 13.5px;
+      color: var(--text-primary);
+      background: var(--bg-primary);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow-x: hidden;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: -1;
+      background:
+        radial-gradient(ellipse 70% 50% at 15% 10%, rgba(16, 185, 129, 0.06) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 40% at 85% 85%, rgba(6, 182, 212, 0.04) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 40% at 50% 50%, rgba(59, 130, 246, 0.03) 0%, transparent 60%);
+    }
+
+    /* ── Keyframes & Animations ──────────────────────────── */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+    .fade-in-up {
+      animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    /* ── Header ──────────────────────────────────────────── */
+    .app-header {
+      padding: 0 32px;
+      height: 64px;
+      border-bottom: 1px solid var(--border-color);
+      background: rgba(15, 19, 34, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .back-portal-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: all 0.2s ease;
+      margin-right: 8px;
+    }
+    .back-portal-btn:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--accent);
+      color: var(--accent);
+      transform: translateX(-2px);
+    }
+    .logo-mark {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--accent), #059669);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      font-weight: 800;
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(16, 185, 129, 0.2);
+    }
+    .app-header h1 {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.2px;
+      color: var(--text-primary);
+    }
+    .header-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-left: auto;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    /* ── Container ───────────────────────────────────────── */
+    .container {
+      max-width: 1280px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 24px 24px 80px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Upload Zone ─────────────────────────────────────── */
+    #upload-zone {
+      border: 1.5px dashed rgba(255, 255, 255, 0.15);
+      border-radius: var(--radius-lg);
+      padding: 60px 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      background: rgba(20, 25, 43, 0.5);
+      backdrop-filter: blur(8px);
+      max-width: 620px;
+      margin: 80px auto 0;
+      position: relative;
+      overflow: hidden;
+    }
+    #upload-zone:hover, #upload-zone.dragover {
+      border-color: var(--accent);
+      background: rgba(20, 25, 43, 0.85);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(16, 185, 129, 0.08);
+    }
+    #upload-zone .icon-wrap {
+      width: 64px;
+      height: 64px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 28px;
+      animation: float 3s ease-in-out infinite;
+    }
+    #upload-zone .title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--text-primary);
+    }
+    #upload-zone .subtitle {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+    #upload-zone .formats {
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+    }
+    #upload-zone .format-tag {
+      padding: 3px 10px;
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-color);
+      font-size: 10px;
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+    #file-input { display: none; }
+
+    /* ── File Info Bar ───────────────────────────────────── */
+    #file-info {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 18px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      margin-bottom: 24px;
+      font-size: 13px;
+    }
+    #file-info .file-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: rgba(16, 185, 129, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+    }
+    #file-info .fname {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    #file-info .count {
+      color: var(--text-secondary);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-color);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    #file-info .clear-btn {
+      margin-left: auto;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 6px 14px;
+      font-size: 11px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    #file-info .clear-btn:hover {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: #ef4444;
+    }
+
+    /* ── Controls Section ────────────────────────────────── */
+    #dashboard-controls {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .filters-section {
+      background: rgba(15, 19, 34, 0.4);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+
+    /* ── Filter Pills ────────────────────────────────────── */
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .filter-row:last-child {
+      margin-bottom: 0;
+    }
+    .pill {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 11.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+    .pill:hover {
+      border-color: var(--border-light);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-primary);
+    }
+    .pill.active {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: var(--accent);
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+    .filter-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-weight: 700;
+    }
+
+    /* ── Stat Cards ──────────────────────────────────────── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 16px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.25s ease;
+      display: flex;
+      flex-direction: column;
+    }
+    .stat-card:hover {
+      border-color: var(--border-light);
+      transform: translateY(-1px);
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 1.5px;
+      opacity: 0.7;
+    }
+    .stat-card.card-blue::before { background: var(--blue); }
+    .stat-card.card-blue .stat-icon { background: rgba(59, 130, 246, 0.1); color: var(--blue); }
+
+    .stat-card.card-emerald::before { background: #10b981; }
+    .stat-card.card-emerald .stat-icon { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+
+    .stat-card.card-purple::before { background: var(--purple); }
+    .stat-card.card-purple .stat-icon { background: rgba(139, 92, 246, 0.1); color: var(--purple); }
+
+    .stat-card.card-cyan::before { background: var(--cyan); }
+    .stat-card.card-cyan .stat-icon { background: rgba(6, 182, 212, 0.1); color: var(--cyan); }
+
+    .stat-card.card-pink::before { background: var(--pink); }
+    .stat-card.card-pink .stat-icon { background: rgba(236, 72, 153, 0.1); color: var(--pink); }
+    
+    .stat-card .stat-icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+
+    .stat-card .label {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .stat-card .value {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text-primary);
+    }
+
+    /* ── Download Button ─────────────────────────────────── */
+    .download-row {
+      display: none;
+      justify-content: flex-end;
+      margin-bottom: 12px;
+      gap: 10px;
+    }
+    .download-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: all 0.2s;
+    }
+    .download-btn:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ── Table Layout ────────────────────────────────────── */
+    #table-section {
+      display: none;
+      flex-direction: column;
+    }
+    .table-wrap {
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--bg-card);
+    }
+    .table-wrap-inner {
+      overflow-x: auto;
+      max-height: 60vh;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 12.5px;
+    }
+    th {
+      background: var(--bg-surface);
+      font-weight: 600;
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      user-select: none;
+      transition: background 0.15s, color 0.15s;
+    }
+    th:hover {
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text-primary);
+    }
+    th.sorted-col {
+      color: var(--accent);
+      background: rgba(16, 185, 129, 0.04);
+    }
+
+    tbody tr { transition: background 0.15s; }
+    tbody tr:hover { background: rgba(255, 255, 255, 0.015); }
+    tbody tr:last-child td { border-bottom: none; }
+    td { color: var(--text-secondary); }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 50px 20px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+    .empty-state-icon {
+      font-size: 32px;
+      display: block;
+      margin-bottom: 10px;
+      opacity: 0.3;
+    }
+
+    /* Scrollbar customization */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.08); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.15); }
+
+    /* ── Responsive adjustments ──────────────────────────── */
+    @media(max-width: 600px) {
+      .container { padding: 16px 12px 40px; }
+      #upload-zone { padding: 40px 20px; margin-top: 40px; }
+      .app-header { padding: 0 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="app-header">
+    <a href="../index.html" class="back-portal-btn">← Back to Portal</a>
+    <div class="logo-mark">AT</div>
+    <h1>Acquisition Tracker Analysis</h1>
+    <div class="header-sub">Acquisition Pipeline</div>
+  </header>
+
+  <div class="container">
+
+    <!-- Upload Zone -->
+    <div id="upload-zone" tabindex="0" role="button" aria-label="Upload CSV or Excel file">
+      <div class="icon-wrap">🤝</div>
+      <div class="title">Drop your Acquisition Tracker file here</div>
+      <div class="subtitle">
+        Automatically parses pipeline headers: Quarter · Manager · Partner Type · School Type · School Name · UDISE · Status · Student Count · Teacher Count · LOI · Data
+      </div>
+      <div class="formats">
+        <span class="format-tag">.CSV</span>
+        <span class="format-tag">.XLSX</span>
+        <span class="format-tag">.XLS</span>
+      </div>
+    </div>
+    <input type="file" id="file-input" accept=".csv,.xlsx,.xls">
+
+    <!-- File Info Bar -->
+    <div id="file-info">
+      <div class="file-icon">📄</div>
+      <span class="fname" id="fi-name"></span>
+      <span class="count" id="fi-count"></span>
+      <button class="clear-btn" id="clear-btn">✕ &nbsp;Clear &amp; Reset</button>
+    </div>
+
+    <!-- Controls Section -->
+    <div id="dashboard-controls">
+      <div class="filters-section" id="filters-container" style="display:none;">
+        <div id="status-filter-row" style="display:none;">
+          <div class="filter-label">Deployment Status</div>
+          <div class="filter-row" id="status-filters"></div>
+        </div>
+        <div id="school-type-filter-row" style="margin-top:12px; display:none;">
+          <div class="filter-label">School Type</div>
+          <div class="filter-row" id="school-type-filters"></div>
+        </div>
+        <div id="quarter-filter-row" style="margin-top:12px; display:none;">
+          <div class="filter-label">Quarter</div>
+          <div class="filter-row" id="quarter-filters"></div>
+        </div>
+      </div>
+
+      <!-- KPI Grid -->
+      <div class="stats-grid" id="stats-grid"></div>
+    </div>
+
+    <!-- Download & Table Section -->
+    <div id="table-section">
+      <div class="download-row" id="download-row"></div>
+      <div class="table-wrap" id="table-wrap"></div>
+    </div>
+
+  </div>
+
+  <script>
+    /* ──────────────────────────────────────────────────────── *
+     *  State variables
+     * ──────────────────────────────────────────────────────── */
+    let DATA = [];
+    let FILTERED_DATA = [];
+    let HEADERS = [];
+    
+    // Progressive Filter States
+    let activeStatus = null;     // Step 1
+    let activeSchoolType = null; // Step 2
+    let activeQuarter = null;    // Step 3
+
+    // Sorting State
+    let sortColumn = null;
+    let sortDirection = 'asc';
+
+    /* ──────────────────────────────────────────────────────── *
+     *  DOM References
+     * ──────────────────────────────────────────────────────── */
+    const $zone           = document.getElementById('upload-zone');
+    const $fileInput      = document.getElementById('file-input');
+    const $fileInfo       = document.getElementById('file-info');
+    const $fiName         = document.getElementById('fi-name');
+    const $fiCount        = document.getElementById('fi-count');
+    const $clearBtn       = document.getElementById('clear-btn');
+    const $controls       = document.getElementById('dashboard-controls');
+    const $filtersSection = document.getElementById('filters-container');
+    const $statsGrid      = document.getElementById('stats-grid');
+    const $tableSection   = document.getElementById('table-section');
+    const $tableWrap      = document.getElementById('table-wrap');
+    const $downloadRow    = document.getElementById('download-row');
+
+    /* ──────────────────────────────────────────────────────── *
+     *  Header Normalizer Map
+     * ──────────────────────────────────────────────────────── */
+    const COL_MAP = {
+      'quarter': 'Quarter', 'qtr': 'Quarter',
+      'acq manager partner/self': 'Acq Manager Partner/Self', 'acq manager': 'Acq Manager Partner/Self', 'acquisition manager': 'Acq Manager Partner/Self', 'manager': 'Acq Manager Partner/Self',
+      'partner type': 'Partner Type', 'partnertype': 'Partner Type',
+      'school type': 'School Type', 'schooltype': 'School Type',
+      'societies/group name': 'Societies/Group Name', 'society': 'Societies/Group Name', 'group name': 'Societies/Group Name', 'society/group': 'Societies/Group Name',
+      'school name': 'School Name', 'schoolname': 'School Name', 'school': 'School Name',
+      'udise': 'UDISE', 'udise code': 'UDISE', 'udisecode': 'UDISE',
+      'deployment status': 'Deployment Status', 'status': 'Deployment Status', 'setup status': 'Deployment Status',
+      'school city or district': 'School City or District', 'city': 'School City or District', 'district': 'School City or District', 'city/district': 'School City or District',
+      'school state': 'School State', 'state': 'School State',
+      'board': 'Board', 'school board': 'Board',
+      'student count': 'Student Count (3-12)', 'student count (3-12)': 'Student Count (3-12)', 'students': 'Student Count (3-12)', 'total students': 'Student Count (3-12)',
+      'teacher count': 'Teacher Count (KG-12)', 'teacher count (kg-12)': 'Teacher Count (KG-12)', 'teachers': 'Teacher Count (KG-12)', 'total teachers': 'Teacher Count (KG-12)',
+      'loi received': 'LOI Received', 'loi': 'LOI Received', 'loi status': 'LOI Received',
+      'data received': 'Data Received', 'data': 'Data Received', 'data status': 'Data Received'
+    };
+
+    function normaliseHeaders(rows) {
+      if (!rows || !rows.length) return [];
+      
+      const originalKeys = Object.keys(rows[0] || {});
+      const normalizedKeysMap = {};
+      
+      originalKeys.forEach(k => {
+        if (k === undefined || k === null) return;
+        const key = String(k).trim();
+        const lookup = key.toLowerCase().replace(/[\s_]+/g, ' ');
+        const mapped = COL_MAP[lookup] || COL_MAP[lookup.replace(/\s/g, '')] || key;
+        normalizedKeysMap[k] = mapped;
+      });
+
+      return rows.map(r => {
+        if (!r) return {};
+        const out = {};
+        for (const [k, v] of Object.entries(r)) {
+          const mappedKey = normalizedKeysMap[k] || k;
+          out[mappedKey] = typeof v === 'string' ? v.trim() : v;
+        }
+        return out;
+      });
+    }
+
+    /* ──────────────────────────────────────────────────────── *
+     *  Drag and Drop, File Picker Upload logic
+     * ──────────────────────────────────────────────────────── */
+    $zone.addEventListener('click', () => $fileInput.click());
+    $zone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') $fileInput.click(); });
+    $zone.addEventListener('dragover', e => { e.preventDefault(); $zone.classList.add('dragover'); });
+    $zone.addEventListener('dragleave', () => $zone.classList.remove('dragover'));
+    $zone.addEventListener('drop', e => {
+      e.preventDefault();
+      $zone.classList.remove('dragover');
+      if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
+    $fileInput.addEventListener('change', () => { if ($fileInput.files.length) handleFile($fileInput.files[0]); });
+
+    function handleFile(file) {
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (ext === 'csv') {
+        Papa.parse(file, {
+          header: true,
+          skipEmptyLines: true,
+          complete: res => {
+            try {
+              const raw = res.data;
+              if (raw.length) {
+                ingestData(file.name, normaliseHeaders(raw));
+              }
+            } catch (err) {
+              console.error("CSV parsing error:", err);
+              alert("Failed to parse CSV file: " + err.message);
+            }
+          },
+          error: err => {
+            console.error("PapaParse error:", err);
+            alert("Failed to read CSV file: " + err.message);
+          }
+        });
+      } else if (ext === 'xlsx' || ext === 'xls') {
+        const reader = new FileReader();
+        reader.onload = e => {
+          try {
+            const wb = XLSX.read(e.target.result, { type: 'array' });
+            const sheet = wb.Sheets[wb.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+            if (rows.length) {
+              ingestData(file.name, normaliseHeaders(rows));
+            }
+          } catch (err) {
+            console.error("XLSX parsing error:", err);
+            alert("Failed to parse Excel file: " + err.message);
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      }
+    }
+
+    function ingestData(name, rows) {
+      try {
+        if (!rows || !rows.length) {
+          alert("No rows found in the uploaded file.");
+          return;
+        }
+
+        // Filter out completely empty or comma-only rows
+        const cleanedRows = rows.filter(r => {
+          return Object.values(r).some(val => val !== undefined && val !== null && String(val).trim() !== '');
+        });
+
+        if (!cleanedRows.length) {
+          alert("The uploaded file contains only empty rows.");
+          return;
+        }
+
+        DATA = cleanedRows;
+        HEADERS = Object.keys(cleanedRows[0] || {});
+        
+        $zone.style.display = 'none';
+        $fiName.textContent = name;
+        $fiCount.textContent = cleanedRows.length.toLocaleString() + ' records';
+        $fileInfo.style.display = 'flex';
+        $controls.style.display = 'flex';
+        $tableSection.style.display = 'flex';
+
+        // Reset progressive filters
+        activeStatus = 'All';
+        activeSchoolType = 'All';
+        activeQuarter = 'All';
+        
+        sortColumn = null;
+        sortDirection = 'asc';
+
+        buildStatusFilters();
+        renderDashboard();
+      } catch (err) {
+        console.error("Ingestion error:", err);
+        alert("Failed to ingest data: " + err.message);
+      }
+    }
+
+    $clearBtn.addEventListener('click', () => {
+      DATA = [];
+      FILTERED_DATA = [];
+      HEADERS = [];
+      activeStatus = null;
+      activeSchoolType = null;
+      activeQuarter = null;
+      sortColumn = null;
+      sortDirection = 'asc';
+      $zone.style.display = '';
+      $fileInfo.style.display = 'none';
+      $controls.style.display = 'none';
+      $tableSection.style.display = 'none';
+      $fileInput.value = '';
+    });
+
+    /* ──────────────────────────────────────────────────────── *
+     *  Math & Value Formatting Utilities
+     * ──────────────────────────────────────────────────────── */
+    function num(v) { 
+      if (v === undefined || v === null) return 0;
+      return parseFloat(v.toString().replace(/[^0-9.-]/g, '')) || 0; 
+    }
+    function fmt(n) { return typeof n === 'number' ? n.toLocaleString() : n; }
+
+    /* ──────────────────────────────────────────────────────── *
+     *  Progressive Filters Generation
+     * ──────────────────────────────────────────────────────── */
+    
+    // Step 1: Status Filters
+    function buildStatusFilters() {
+      const hasStatus = HEADERS.includes('Deployment Status');
+      if (hasStatus) {
+        $filtersSection.style.display = 'block';
+        const elRow = document.getElementById('status-filter-row');
+        if (elRow) elRow.style.display = 'block';
+        const statuses = [...new Set(DATA.map(r => r['Deployment Status']).filter(Boolean))].sort();
+        buildPills('status-filters', ['All', ...statuses], activeStatus, v => {
+          activeStatus = v;
+          
+          // Clear sub-filters
+          activeSchoolType = 'All';
+          activeQuarter = 'All';
+          
+          buildSchoolTypeFilters();
+          buildQuarterFilters();
+          renderDashboard();
+        });
+      } else {
+        $filtersSection.style.display = 'none';
+        const elRow = document.getElementById('status-filter-row');
+        if (elRow) elRow.style.display = 'none';
+      }
+      buildSchoolTypeFilters();
+      buildQuarterFilters();
+    }
+
+    // Step 2: School Type Filters
+    function buildSchoolTypeFilters() {
+      const row = document.getElementById('school-type-filter-row');
+      const hasSchoolType = HEADERS.includes('School Type');
+
+      if (hasSchoolType && activeStatus) {
+        if (row) row.style.display = 'block';
+        
+        // Filter rows by activeStatus to find available school types
+        const filteredRows = DATA.filter(r => activeStatus === 'All' || r['Deployment Status'] === activeStatus);
+        const types = [...new Set(filteredRows.map(r => r['School Type']).filter(Boolean))].sort();
+
+        buildPills('school-type-filters', ['All', ...types], activeSchoolType, v => {
+          activeSchoolType = v;
+          
+          // Clear quarter filter
+          activeQuarter = 'All';
+
+          buildQuarterFilters();
+          renderDashboard();
+        });
+      } else {
+        if (row) row.style.display = 'none';
+      }
+    }
+
+    // Step 3: Quarter Filters
+    function buildQuarterFilters() {
+      const row = document.getElementById('quarter-filter-row');
+      const hasQuarter = HEADERS.includes('Quarter');
+
+      if (hasQuarter && activeSchoolType) {
+        if (row) row.style.display = 'block';
+        
+        // Filter rows by status & school type to find available quarters
+        const filteredRows = DATA.filter(r => {
+          const matchStatus = activeStatus === 'All' || r['Deployment Status'] === activeStatus;
+          const matchType = activeSchoolType === 'All' || r['School Type'] === activeSchoolType;
+          return matchStatus && matchType;
+        });
+        
+        const quarters = [...new Set(filteredRows.map(r => r['Quarter']).filter(Boolean))].sort((a, b) => {
+          const na = parseInt(a.replace(/\D/g, ''), 10) || 0;
+          const nb = parseInt(b.replace(/\D/g, ''), 10) || 0;
+          return na - nb || a.localeCompare(b);
+        });
+
+        buildPills('quarter-filters', ['All', ...quarters], activeQuarter, v => {
+          activeQuarter = v;
+          renderDashboard();
+        });
+      } else {
+        if (row) row.style.display = 'none';
+      }
+    }
+
+    function buildPills(containerId, values, activeValue, onClick) {
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      el.innerHTML = '';
+      values.forEach(v => {
+        const btn = document.createElement('button');
+        btn.className = 'pill' + (v === activeValue ? ' active' : '');
+        btn.textContent = v;
+        btn.addEventListener('click', () => {
+          onClick(v);
+          Array.from(el.children).forEach(c => c.classList.toggle('active', c.textContent === v));
+        });
+        el.appendChild(btn);
+      });
+    }
+
+    /* ──────────────────────────────────────────────────────── *
+     *  Rendering Dashboard Controls & KPIs
+     * ──────────────────────────────────────────────────────── */
+    function renderDashboard() {
+      try {
+        // 1. Filter Data
+        FILTERED_DATA = DATA.filter(r => {
+          if (activeStatus && activeStatus !== 'All' && r['Deployment Status'] !== activeStatus) return false;
+          if (activeSchoolType && activeSchoolType !== 'All' && r['School Type'] !== activeSchoolType) return false;
+          if (activeQuarter && activeQuarter !== 'All' && r['Quarter'] !== activeQuarter) return false;
+          return true;
+        });
+
+        // 2. Compute statistics
+        const uniqueSchools = new Set(FILTERED_DATA.map(r => r['School Name']).filter(Boolean)).size;
+        
+        let totalStudents = 0;
+        let totalTeachers = 0;
+        let loiCount = 0;
+        let dataCount = 0;
+
+        FILTERED_DATA.forEach(r => {
+          totalStudents += num(r['Student Count (3-12)']);
+          totalTeachers += num(r['Teacher Count (KG-12)']);
+          
+          const loi = (r['LOI Received'] || '').toString().toLowerCase().trim();
+          if (['yes', 'true', 'received', '1'].includes(loi)) loiCount++;
+
+          const dataRec = (r['Data Received'] || '').toString().toLowerCase().trim();
+          if (['yes', 'true', 'received', '1'].includes(dataRec)) dataCount++;
+        });
+
+        const totalRecords = FILTERED_DATA.length;
+        const loiPct = totalRecords > 0 ? Math.round((loiCount / totalRecords) * 100) : 0;
+        const dataPct = totalRecords > 0 ? Math.round((dataCount / totalRecords) * 100) : 0;
+
+        // Stat cards matching the color system
+        const cards = [
+          { label: 'Schools Covered', val: fmt(uniqueSchools), icon: '🏫', color: 'blue' },
+          { label: 'Total Students (3-12)', val: fmt(totalStudents), icon: '🎓', color: 'emerald' },
+          { label: 'Total Teachers (KG-12)', val: fmt(totalTeachers), icon: '👨‍🏫', color: 'pink' },
+          { label: 'LOI Received', val: `${fmt(loiCount)} (${loiPct}%)`, icon: '📝', color: 'purple' },
+          { label: 'Data Received', val: `${fmt(dataCount)} (${dataPct}%)`, icon: '💾', color: 'cyan' }
+        ];
+
+        $statsGrid.innerHTML = cards.map((c, i) => 
+          `<div class="stat-card fade-in-up card-${c.color}" style="animation-delay:${i * 0.04}s">
+            <div class="stat-icon">${c.icon}</div>
+            <div class="label">${c.label}</div>
+            <div class="value">${c.val}</div>
+          </div>`
+        ).join('');
+
+        // 3. Render Table
+        renderTable();
+
+        // 4. Render Download Buttons
+        renderDownloadBtns();
+      } catch (err) {
+        console.error("Dashboard render error:", err);
+      }
+    }
+
+    /* ──────────────────────────────────────────────────────── *
+     *  Table Sorting & Rendering
+     * ──────────────────────────────────────────────────────── */
+    function sortData(rows) {
+      if (!sortColumn) return rows;
+      return [...rows].sort((a, b) => {
+        let valA = a[sortColumn] !== undefined ? a[sortColumn] : '';
+        let valB = b[sortColumn] !== undefined ? b[sortColumn] : '';
+
+        const isNumeric = ['Student Count (3-12)', 'Teacher Count (KG-12)', 'UDISE', 'S.No'].includes(sortColumn);
+        if (isNumeric) {
+          return sortDirection === 'asc' ? num(valA) - num(valB) : num(valB) - num(valA);
+        }
+
+        valA = String(valA).toLowerCase();
+        valB = String(valB).toLowerCase();
+        if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+        if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    function handleHeaderClick(colKey) {
+      if (sortColumn === colKey) {
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortColumn = colKey;
+        sortDirection = 'asc';
+      }
+      renderTable();
+    }
+
+    function renderTable() {
+      try {
+        if (!FILTERED_DATA.length) {
+          $tableWrap.innerHTML = '<div class="empty-state"><span class="empty-state-icon">📭</span>No records match the selected filters</div>';
+          return;
+        }
+
+        const sorted = sortData(FILTERED_DATA);
+        
+        // Cap the preview list to 1,000 rows to ensure optimal tab memory usage and prevent Chrome crashes
+        const displayRows = sorted.slice(0, 1000);
+        
+        const preferredCols = [
+          'Quarter', 'School Name', 'UDISE', 'Deployment Status', 'School Type',
+          'Acq Manager Partner/Self', 'Partner Type', 'Societies/Group Name',
+          'School City or District', 'School State', 'Board', 
+          'Student Count (3-12)', 'Teacher Count (KG-12)', 'LOI Received', 'Data Received'
+        ];
+        
+        const displayHeaders = [];
+        preferredCols.forEach(col => {
+          if (HEADERS.includes(col)) {
+            displayHeaders.push(col);
+          }
+        });
+        HEADERS.forEach(col => {
+          if (!displayHeaders.includes(col)) {
+            displayHeaders.push(col);
+          }
+        });
+
+        // Build headers
+        const ths = displayHeaders.map(h => {
+          const isSorted = sortColumn === h;
+          const arrow = isSorted ? (sortDirection === 'asc' ? ' ▲' : ' ▼') : '';
+          const activeClass = isSorted ? 'class="sorted-col"' : '';
+          return `<th ${activeClass} style="cursor:pointer;" onclick="handleHeaderClick('${h}')">${h}${arrow}</th>`;
+        }).join('');
+
+        // Build rows
+        const trs = displayRows.map(r => {
+          const cells = displayHeaders.map(h => {
+            const val = r[h] !== undefined ? r[h] : '';
+            const isNum = ['Student Count (3-12)', 'Teacher Count (KG-12)'].includes(h);
+            const displayVal = isNum && val !== '' ? fmt(num(val)) : val;
+            return `<td title="${String(val).replace(/"/g, '&quot;')}">${displayVal}</td>`;
+          }).join('');
+          return `<tr>${cells}</tr>`;
+        }).join('');
+
+        let capMessage = '';
+        if (sorted.length > 1000) {
+          capMessage = `<div style="padding: 10px 14px; background: rgba(59, 130, 246, 0.05); border-bottom: 1px solid var(--border-color); font-size: 11.5px; color: var(--text-secondary); text-align: left; font-weight: 500;">
+            ⚠️ Showing top 1,000 of ${fmt(sorted.length)} matching records. Click "Download" to export the full dataset.
+          </div>`;
+        }
+
+        $tableWrap.innerHTML = capMessage + `<div class="table-wrap-inner"><table><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table></div>`;
+      } catch (err) {
+        console.error("Table render error:", err);
+      }
+    }
+
+    /* ──────────────────────────────────────────────────────── *
+     *  Export Logic (CSV & XLSX)
+     * ──────────────────────────────────────────────────────── */
+    function downloadCSV(filename) {
+      if (!FILTERED_DATA.length) return;
+      const header = HEADERS.join(',');
+      const body = FILTERED_DATA.map(r => HEADERS.map(h => {
+        const v = String(r[h] !== undefined ? r[h] : '').replace(/"/g, '""');
+        return '"' + v + '"';
+      }).join(',')).join('\n');
+
+      const blob = new Blob([header + '\n' + body], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function downloadXLSX(filename) {
+      if (!FILTERED_DATA.length) return;
+      const dataToExport = FILTERED_DATA.map(r => {
+        const out = {};
+        HEADERS.forEach(h => {
+          out[h] = r[h];
+        });
+        return out;
+      });
+
+      const ws = XLSX.utils.json_to_sheet(dataToExport);
+      const wb = XLSX.utils.book_new();
+      XLSX.book_append_sheet(wb, ws, "Acquisition Data");
+      XLSX.writeFile(wb, filename);
+    }
+
+    function sanitize(s) {
+      return (s || '').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '');
+    }
+
+    function renderDownloadBtns() {
+      if (!FILTERED_DATA.length) { $downloadRow.style.display = 'none'; return; }
+      $downloadRow.style.display = 'flex';
+      $downloadRow.innerHTML = '';
+
+      const statusPart = sanitize(activeStatus || 'All');
+      const typePart = sanitize(activeSchoolType || 'All');
+      const qtrPart = sanitize(activeQuarter || 'All');
+      const baseFilename = `${statusPart}_${typePart}_${qtrPart}_Acquisition_Data`;
+
+      // CSV Button
+      const btnCSV = document.createElement('button');
+      btnCSV.className = 'download-btn';
+      btnCSV.innerHTML = '⬇ Download CSV';
+      btnCSV.addEventListener('click', () => downloadCSV(baseFilename + '.csv'));
+      $downloadRow.appendChild(btnCSV);
+
+      // XLSX Button
+      const btnXLSX = document.createElement('button');
+      btnXLSX.className = 'download-btn';
+      btnXLSX.innerHTML = '📊 Download Excel (XLSX)';
+      btnXLSX.addEventListener('click', () => downloadXLSX(baseFilename + '.xlsx'));
+      $downloadRow.appendChild(btnXLSX);
+    }
+  </script>
+</body>
+</html>
