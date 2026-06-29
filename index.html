@@ -27,6 +27,7 @@
       --accent-orange: #EF9F27;
       --accent-purple: #8b5cf6;
       --accent-cyan: #06b6d4;
+      --accent-emerald: #10b981;
       --radius: 14px;
     }
     html {
@@ -124,6 +125,9 @@
     .portal-card.card-deployment::before {
       background: linear-gradient(90deg, var(--accent-purple), var(--accent-cyan));
     }
+    .portal-card.card-acquisition::before {
+      background: linear-gradient(90deg, var(--accent-emerald), #34d399);
+    }
 
     .portal-card:hover {
       border-color: var(--border-light);
@@ -137,6 +141,9 @@
     }
     .portal-card.card-deployment:hover {
       box-shadow: 0 12px 30px rgba(139, 92, 246, 0.06), 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+    .portal-card.card-acquisition:hover {
+      box-shadow: 0 12px 30px rgba(16, 185, 129, 0.06), 0 4px 12px rgba(0, 0, 0, 0.2);
     }
 
     .card-icon {
@@ -158,6 +165,10 @@
       background: rgba(139, 92, 246, 0.08);
       color: var(--accent-purple);
     }
+    .card-acquisition .card-icon {
+      background: rgba(16, 185, 129, 0.08);
+      color: var(--accent-emerald);
+    }
 
     .portal-card h2 {
       font-family: 'Outfit', sans-serif;
@@ -175,6 +186,9 @@
     }
     .card-deployment:hover h2 {
       color: var(--accent-purple);
+    }
+    .card-acquisition:hover h2 {
+      color: var(--accent-emerald);
     }
 
     .portal-card p {
@@ -202,6 +216,9 @@
     }
     .card-deployment:hover .card-action {
       color: var(--accent-purple);
+    }
+    .card-acquisition:hover .card-action {
+      color: var(--accent-emerald);
     }
     .action-arrow {
       transition: transform 0.2s;
@@ -259,6 +276,17 @@
         <div class="card-icon">🚀</div>
         <h2>Deployment Tracker</h2>
         <p>Monitor installation progress, device setups, and school distributions across different sectors.</p>
+        <div class="card-action">
+          <span>Open Dashboard</span>
+          <span class="action-arrow">→</span>
+        </div>
+      </a>
+
+      <!-- Acquisition Tracker -->
+      <a href="Acquisition Tracker/index.html" class="portal-card card-acquisition">
+        <div class="card-icon">🤝</div>
+        <h2>Acquisition Tracker</h2>
+        <p>Track school acquisition pipelines, partner contributions, board distributions, and onboarding statuses.</p>
         <div class="card-action">
           <span>Open Dashboard</span>
           <span class="action-arrow">→</span>

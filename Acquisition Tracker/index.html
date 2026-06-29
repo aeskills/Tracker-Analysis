@@ -893,31 +893,32 @@
         
         let totalStudents = 0;
         let totalTeachers = 0;
-        let loiCount = 0;
-        let dataCount = 0;
+        let deployedCount = 0;
+        let notDeployedCount = 0;
 
         FILTERED_DATA.forEach(r => {
           totalStudents += num(r['Student Count (3-12)']);
           totalTeachers += num(r['Teacher Count (KG-12)']);
           
-          const loi = (r['LOI Received'] || '').toString().toLowerCase().trim();
-          if (['yes', 'true', 'received', '1'].includes(loi)) loiCount++;
-
-          const dataRec = (r['Data Received'] || '').toString().toLowerCase().trim();
-          if (['yes', 'true', 'received', '1'].includes(dataRec)) dataCount++;
+          const status = (r['Deployment Status'] || '').toString().toLowerCase().trim();
+          if (status === 'deployed') {
+            deployedCount++;
+          } else {
+            notDeployedCount++;
+          }
         });
 
         const totalRecords = FILTERED_DATA.length;
-        const loiPct = totalRecords > 0 ? Math.round((loiCount / totalRecords) * 100) : 0;
-        const dataPct = totalRecords > 0 ? Math.round((dataCount / totalRecords) * 100) : 0;
+        const deployedPct = totalRecords > 0 ? Math.round((deployedCount / totalRecords) * 100) : 0;
+        const notDeployedPct = totalRecords > 0 ? Math.round((notDeployedCount / totalRecords) * 100) : 0;
 
         // Stat cards matching the color system
         const cards = [
           { label: 'Schools Covered', val: fmt(uniqueSchools), icon: '🏫', color: 'blue' },
           { label: 'Total Students (3-12)', val: fmt(totalStudents), icon: '🎓', color: 'emerald' },
           { label: 'Total Teachers (KG-12)', val: fmt(totalTeachers), icon: '👨‍🏫', color: 'pink' },
-          { label: 'LOI Received', val: `${fmt(loiCount)} (${loiPct}%)`, icon: '📝', color: 'purple' },
-          { label: 'Data Received', val: `${fmt(dataCount)} (${dataPct}%)`, icon: '💾', color: 'cyan' }
+          { label: 'Deployed', val: `${fmt(deployedCount)} (${deployedPct}%)`, icon: '🚀', color: 'purple' },
+          { label: 'Not Deployed', val: `${fmt(notDeployedCount)} (${notDeployedPct}%)`, icon: '🚫', color: 'cyan' }
         ];
 
         $statsGrid.innerHTML = cards.map((c, i) => 
